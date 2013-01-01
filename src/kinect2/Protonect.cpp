@@ -409,14 +409,17 @@ void Protonect::cicle()
         time1<<(tstart2-tstart1)*1000<<"\t";
         cudaMemset(pj,0,400*240*sizeof(unsigned char));
         num_obstacle_candidate = project2D(d_cloud, pj, coeffi, obstacle_position,d_table,histo_x,histo_y,histo_z,d_kernel,kernel_size,result_,label,h_label,ttime);
-        obs_time<<ttime[0]<<"\t"<<ttime[1]<<"\t"<<ttime[2]<<"\t"<<ttime[3]<<"\t"<<ttime[4]<<"\t"<<ttime[5]<<"\t"<<ttime[6]<<"\t";
-        obs_time<<"\n";
+        //printf("!!!!!!!!!!!!!!number obs %d\n",num_obstacle_candidate);
+        //        obs_time<<ttime[0]<<"\t"<<ttime[1]<<"\t"<<ttime[2]<<"\t"<<ttime[3]<<"\t"<<ttime[4]<<"\t"<<ttime[5]<<"\t"<<ttime[6]<<"\t";
+//        obs_time<<"\n";
         cudaDeviceSynchronize();
         double tstart3=dtime();
   //      printf("44 obstacle detection time = %f(ms)\n\n",(tstart3-tstart2)*1000);
         time1<<(tstart3-tstart2)*1000<<"\t";
         nubot_common::object_info obstacle_ball_position;
         printf("yellow number %d \n",*h_num_yellow);
+        if (num_obstacle_candidate==0)
+           obstacle_ball_position.obs_know=false;
         if (*h_num_yellow<20)
          {
                printf("no ball!!!!!!!!!!!!!!!!!!!\n\n");
@@ -432,8 +435,8 @@ void Protonect::cicle()
             ball_time<<"\n";
   //          printf("551 ball ball time = %f(ms)\n\n",(tstart5-tstart4)*1000);
             time1<<(tstart5-tstart4)*1000<<"\t";
-            if (num_ball_candidate>0)
-               obstacle_ball_position.ball_know=true;
+            if (num_ball_candidate==0)
+               obstacle_ball_position.ball_know=false;
 
             for (int r=0;r<num_ball_candidate;r++)
             {
@@ -450,15 +453,6 @@ void Protonect::cicle()
              else if( 100000 != cloud.at(std::min(temp_x+2000,int(cloud.width)-1), std::min(temp_y+2000,int(cloud.height)-1)).z )
                    ball_point = cloud.at(std::min(temp_x+2000,int(cloud.width)-1), std::min(temp_y+2000,int(cloud.height)-1));
 
-  //           if ((ball_point.z>500)&&(ball_point.z<7500))
-  //           {
-  //              cppfile<<ball_point.z<<"\t"<<ball_position[r*3+2]<<"\t";
-  //              cppfile<<"\n";
-  //           }
-  //           float pixel_num=3.67*10^9*pow(ball_point.z,2);
-  //           printf("pixel num %f count %f\n",796800000*pow(ball_point.z,-1.764),ball_position[r*3+2]);
-  //                         cppfile<<3670000000*pow(ball_point.z,-1.972)<<"\t"<<ball_position[r*3+2]<<"\t";
-  //                         cppfile<<"\n";
              if(ball_position[r*3+2]>(0.33*3670000000*pow(ball_point.z,-1.972)))
              {
              float xk=ball_point.x*aa[0]+ball_point.y*aa[1]+ball_point.z*aa[2]+aa[3]*1000;
@@ -468,28 +462,18 @@ void Protonect::cicle()
              printf("robot 3D ball position  forward left up %f %f %f\n\n",xk,yk,zk);
   //           if (xk>1300 && zk < 1200 && obstacle_ball_position.ball_know)
 
-             if (xk>0 && obstacle_ball_position.ball_know)
+             if (xk>0)
             {
              obstacle_ball_position.ball_know=true;
              geometry_msgs::Point ball_pp;
              ball_pp.x=xk;
              ball_pp.y=yk;
              ball_pp.z=zk;
-  //           if (xk<1000)
-  //           {
-  //              cppfile<<"error:"<<xk<<"\t"<<yk<<"\t"<<zk<<"\t"<<ball_point.x<<"\t"<<ball_point.y<<"\t"<<ball_point.z<<"\t";
-  //              cppfile<<"\n";
-  //           }
 
              obstacle_ball_position.ball_pos.push_back(ball_pp);
             }
-            else
-             {
-             obstacle_ball_position.ball_know=false;
-             }
+
             }
-             else
-                 obstacle_ball_position.ball_know=false;
             }
         }
         double clocktime1=dtime();
@@ -535,6 +519,7 @@ void Protonect::cicle()
         if (cali_tf)
           {
               float temp=0.0;
+              bool flag_temp=false;
               float tt=0.0;
               char key = '0';
               std::cout << ":make sure the point is ok and the ball is at facing direction of robot(angle=0)!" << std::endl;
@@ -567,10 +552,13 @@ void Protonect::cicle()
                          }
                      }
                      temp=temp/10.0;
+                     flag_temp=true;
 
                  }
 
               }
+              if (flag_temp)
+              {
           float sin_=temp/(sqrt(temp*temp+1));
           float cos_=1.0/(sqrt(temp*temp+1));
           Eigen::MatrixXf m4;
@@ -593,44 +581,45 @@ void Protonect::cicle()
           std::ofstream tf_matrix_file(tf_matrix_path.c_str());
           tf_matrix_file << tf_matrx_;
           tf_matrix_file.close();
+              }
 
           }
         if (point_cloud_view && !ball_detection_view && !obstacle_detection_view)
-        {
+        {//只看点云，不看障碍物
         viewer11->removeAllPointClouds();
         viewer11->removeAllShapes();
         viewer11->addPointCloud<pcl::PointXYZRGBA> (cloud.makeShared(),"sample cloud");
          viewer11->spinOnce (10);
         }
         if (point_cloud_view && obstacle_detection_view)
-        {
+        {//看点云与障碍物
         viewer11->removeAllPointClouds();
         viewer11->removeAllShapes();
         viewer11->addPointCloud<pcl::PointXYZRGBA> (cloud.makeShared(),"sample cloud");
 
         for (int i=0;i<num_obstacle_candidate;i++)
         {
-            obstacle_ball_position.obs_know=true;
-            if (obstacle_position[i*2+1]==0)
+
+            if (obstacle_position[i*2+1]==0||obstacle_position[i*2+1]>6100)
                 continue;
             geometry_msgs::Point obs_pp;
             obs_pp.x=obstacle_position[i*2+1];
             obs_pp.y=obstacle_position[i*2+0];
 
             obstacle_ball_position.obs_pos.push_back(obs_pp);
-
-           if(obstacle_position[i*2+1]<6100)
-           {
-                 printf("number of obstacles x y %d %f %f\n",num_obstacle_candidate,obstacle_position[i*2+0],obstacle_position[i*2+1]);
+            obstacle_ball_position.obs_know=true;
+//           if(obstacle_position[i*2+1]<6100)
+//           {
+            printf("number of obstacles left forwa++++rd %d %f %f\n",i,obs_pp.y,obs_pp.x);
             sss<<i;
             string number1=sss.str();
               viewer11->addCube(obstacle_position[i*2+0]-50,obstacle_position[i*2+0]+250,300,400,obstacle_position[i*2+1]-180,obstacle_position[i*2+1]+120,255.0,1.0,1.0,number1.c_str());
   //          viewer11->addSphere(pcl::PointXYZ(obstacle_position[i*2+0],300,obstacle_position[i*2+1]),200,number1.c_str());
   //         viewer11->addCube(obstacle_position[i*2+0]-180,obstacle_position[i*2+0]+180,400,480,obstacle_position[i*2+1]-180,obstacle_position[i*2+1]+180,255.0,1.0,1.0,number1.c_str());
-          }
-           }
+//          }
+        }
        if (ball_detection_view && obstacle_ball_position.ball_know)
-       {
+       {//添加球可视化
            for (int i=0;i<obstacle_ball_position.ball_pos.size();i++)
            {
            sss1<<i+10;
@@ -639,6 +628,21 @@ void Protonect::cicle()
            }
            }
          viewer11->spinOnce (10);
+        }
+        if(!obstacle_detection_view && num_obstacle_candidate)
+        {
+        for (int i=0;i<num_obstacle_candidate;i++)
+        {
+
+            if (obstacle_position[i*2+1]==0||obstacle_position[i*2+1]>6100)
+                continue;
+            geometry_msgs::Point obs_pp;
+            obs_pp.x=obstacle_position[i*2+1];
+            obs_pp.y=obstacle_position[i*2+0];
+
+            obstacle_ball_position.obs_pos.push_back(obs_pp);
+            obstacle_ball_position.obs_know=true;
+        }
         }
        obstacle_ball_position.header.stamp=ros::Time::now();
        obstacle_ball_pub.publish(obstacle_ball_position);
