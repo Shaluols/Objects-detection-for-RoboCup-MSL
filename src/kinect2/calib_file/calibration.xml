@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<Color_Calib>
+  <_>
+    <poly_pts>
+      86 40 92 110 163 88 109 17</poly_pts>
+    <line_pts>
+      0 255</line_pts>
+    <SelectedColor>
+      2</SelectedColor></_>
+  <_>
+    <poly_pts>
+      128 139 139 134 138 120 128 122</poly_pts>
+    <line_pts>
+      0 50</line_pts>
+    <SelectedColor>
+      0</SelectedColor></_>
+  <_>
+    <poly_pts>
+      36 211 135 230 132 4 31 3</poly_pts>
+    <line_pts>
+      0 255</line_pts>
+    <SelectedColor>
+      0</SelectedColor></_>
+  <_>
+    <poly_pts>
+      113 113 143 113 143 143 113 143</poly_pts>
+    <line_pts>
+      0 128</line_pts>
+    <SelectedColor>
+      2</SelectedColor></_></Color_Calib>
+</opencv_storage>

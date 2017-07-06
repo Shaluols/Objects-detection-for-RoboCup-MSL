@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/libfreenect2-master/devel
+
+Name: libfreenect2
+Description: Description of libfreenect2
+Version: 0.0.0
+Cflags: -I/home/ubuntu/libfreenect2-master/src/libfreenect2/include -I/home/ubuntu/libfreenect2-master/build/libfreenect2
+Libs: -L/home/ubuntu/libfreenect2-master/devel/lib -lfreenect2
+Requires: roscpp

@@ -1,0 +1,9 @@
+Point2d target
+float32 target_ori
+Point2d target_vel
+float32 maxvel
+float32 maxw
+Point2d robot_pos
+float32   robot_ori
+char    move_action
+char    rotate_acton

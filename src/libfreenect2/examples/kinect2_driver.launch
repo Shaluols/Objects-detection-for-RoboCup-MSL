@@ -1,0 +1,11 @@
+<!-- Launch -->
+<launch>
+
+<node
+     pkg = "kinect2_driver"
+     type = "kinect2_driver"
+     name = "kinect2_driver"
+     output = "screen"
+/>
+
+</launch>

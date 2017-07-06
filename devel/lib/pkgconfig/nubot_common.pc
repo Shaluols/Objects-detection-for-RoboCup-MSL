@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/libfreenect2-master/devel
+
+Name: nubot_common
+Description: Description of nubot_common
+Version: 0.0.0
+Cflags: -I/home/ubuntu/libfreenect2-master/devel/include -I/home/ubuntu/libfreenect2-master/src/nubot_common/core/include
+Libs: -L/home/ubuntu/libfreenect2-master/devel/lib 
+Requires: 
