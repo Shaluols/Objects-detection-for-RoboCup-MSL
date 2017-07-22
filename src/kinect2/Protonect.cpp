@@ -330,8 +330,8 @@ void Protonect::cicle()
     #define KINECT_POS_Y -0.07
     #define KINECT_POS_Z 0.49
 
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer11 (new pcl::visualization::PCLVisualizer ("point cloud Viewer"));
-    viewer11->setCameraPosition(0, 0, -4000, 0, 0, 1,0, -1, 0);
+  //  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer11 (new pcl::visualization::PCLVisualizer ("point cloud Viewer"));
+  //  viewer11->setCameraPosition(0, 0, -4000, 0, 0, 1,0, -1, 0);
                   //用来记录时间的
     cppfile.open("/home/ubuntu/diatance_pixel.txt");
     cppfile<<"distance"<<"\t"<<"ball pixels number"<<"\t";
@@ -584,6 +584,7 @@ void Protonect::cicle()
               }
 
           }
+/*
         if (point_cloud_view && !ball_detection_view && !obstacle_detection_view)
         {//只看点云，不看障碍物
         viewer11->removeAllPointClouds();
@@ -629,6 +630,7 @@ void Protonect::cicle()
            }
          viewer11->spinOnce (10);
         }
+*/
         if(!obstacle_detection_view && num_obstacle_candidate)
         {
         for (int i=0;i<num_obstacle_candidate;i++)
