@@ -73,7 +73,6 @@ public:
     bool cali_tf, color_calibrating,view_color_seg, point_cloud_view;
     bool ball_detection_view, obstacle_detection_view;
     vector<geometry_msgs::Point> tf_ball;
-    std::ofstream cppfile, time1, ball_time, obs_time;
     pcl::PointXYZRGBA ball_point,ball_point_temp;
     cv::Mat rgb_image;
 

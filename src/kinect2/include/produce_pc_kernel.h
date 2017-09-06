@@ -16,6 +16,6 @@ void pass_cuda_ball(float *cloud, float *output, float *filter_value);
 void filter_obstacle(float *d_cloud, float *output, float *filter_value_obstacle);
 void cluster_center(int *d_lable, int *ball_position, vector<int> v);
 void cluster_center_(int *d_lable, int *ball_position, vector<int> vv, vector<int> num);
-int CCL(unsigned char *d_seg_table, int *d_label, float *ball_position, float *ttime1);
-int project2D(float *d_cloud, unsigned char *pj, float *aa, float *obstacle_position, unsigned char *d_table, int *histo_x, int *histo_y, int *histo_z, double *d_kernel, size_t kernel_size, unsigned char *result_, int *label, int *h_label, float *ttime);
+int CCL(unsigned char *d_seg_table, int *d_label, float *ball_position);
+int project2D(float *d_cloud, unsigned char *pj, float *aa, float *obstacle_position, unsigned char *d_table, int *histo_x, int *histo_y, int *histo_z, double *d_kernel, size_t kernel_size, unsigned char *result_, int *label, int *h_label);
 }

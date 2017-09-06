@@ -1,2 +1,23 @@
-正常比赛
+This project is for the balls and obstacles detection during the RoboCup MSL competition based on the libfreenect2 driver
+It should be runned on the Jetson TX1 
+
+Intall requirements:
+Hardware:
+Jetson TX1, Kinect V2
+Software:
+CUDA 7.0, libfreenect2 driver
+
+
+Install:
+1. Install CUDA on TX1
+2. install libfreenect2 on TX1 http://github.com/OpenKinect/libfreenect2
+
+if you prepared the environments, you can:
+catkin_make
+source devel/setup.bash
+roslaunch kinect2 kinect2_driver
+
+The detection results are published by ROS topic.
+
+In the launch file you can chane the parameters to see the medium image results and pointcoud.
 

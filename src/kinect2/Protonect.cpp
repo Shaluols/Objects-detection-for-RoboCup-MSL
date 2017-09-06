@@ -101,8 +101,6 @@ void Protonect::cicle()
     nh.getParam("device_id",device_id_);
     obstacle_ball_pub = nh.advertise<nubot_common::object_info>("ball_obstacle_position", 1);
 
-
-
   #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
     // avoid flooing the very slow Windows console with debug messages
     libfreenect2::setGlobalLogger(libfreenect2::createConsoleLogger(libfreenect2::Logger::Info));
@@ -229,9 +227,6 @@ void Protonect::cicle()
     rgbsize = 4 * 1920 * 1080;
     /// Init GPU variables and memery
 
-
-
-
     cudaError_t err = cudaSuccess;
     cudaMalloc((void**)&d_cloud,       imageSize*8);
     cudaMalloc((void**)&d_dis_depth,   imageSize);
@@ -247,7 +242,6 @@ void Protonect::cicle()
     cudaMemcpy(d_map_x,     registration->impl_->depth_to_color_map_x, imageSize,       cudaMemcpyHostToDevice);
     cudaMemcpy(d_map_yi,    registration->impl_->depth_to_color_map_yi,imageSize,       cudaMemcpyHostToDevice);//512*424
     cudaMemcpy(d_c,         &para,                                     4*sizeof(float), cudaMemcpyHostToDevice);
-    libfreenect2::Frame registered(512, 424, 4, h_register);
   //--------------------------------------------------------------------------------------------------------------
   //--------------------------------------------------------------------------------------------------------------
 
@@ -258,7 +252,6 @@ void Protonect::cicle()
     }
     agent = atoi(environment);//Convert a string to an integer
     ss<<agent;
-               //获取home目录
     home=getenv("HOME");
 
     sh<<home;
@@ -267,7 +260,6 @@ void Protonect::cicle()
     tf_matrix_path   = calibration_path + "/tf_matrix.txt";
     color_segmenter_ = new nubot::ColorSegment(color_table_path.c_str());
     float aa[12]={0};
-  //  FILE *fpRead=fopen("/home/ubuntu/libfreenect2-master/src/kinect2/calib_file/coefficients_plane.txt","r");
     FILE *fpRead_tf=fopen("/home/ubuntu/libfreenect2-master/src/kinect2/calib_file/tf_matrix.txt","r");
     if (fpRead_tf==NULL)
         printf("can't read the tf file \n");
@@ -306,9 +298,6 @@ void Protonect::cicle()
     kernel_size=kernel.size();
 
     cudaMalloc((void **)&result_, 400*240*sizeof(unsigned char));
-
-    ttime=new float[7];
-    ttime1=new float[6];
     cudaMalloc((void **)&label, 400*240*sizeof(int));
 
     cudaHostAlloc((void **)&h_label, 400*240*sizeof(int),cudaHostAllocDefault);
@@ -316,35 +305,17 @@ void Protonect::cicle()
     memset(obstacle_position,0,40*sizeof(float));
 
     ros::param::get("/kinect2_driver/color_calibrating",color_calibrating);
-
     ros::param::get("/kinect2_driver/cali_tf",cali_tf);
-
     ros::param::get("/kinect2_driver/view_color_seg",view_color_seg);
-
     ros::param::get("/kinect2_driver/point_cloud_view",point_cloud_view);
-
     ros::param::get("/kinect2_driver/ball_detection_view",ball_detection_view);
-
     ros::param::get("/kinect2_driver/obstacle_detection_view",obstacle_detection_view);
     #define KINECT_POS_X 0.12
     #define KINECT_POS_Y -0.07
     #define KINECT_POS_Z 0.49
 
-  //  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer11 (new pcl::visualization::PCLVisualizer ("point cloud Viewer"));
-  //  viewer11->setCameraPosition(0, 0, -4000, 0, 0, 1,0, -1, 0);
-                  //用来记录时间的
-    cppfile.open("/home/ubuntu/diatance_pixel.txt");
-    cppfile<<"distance"<<"\t"<<"ball pixels number"<<"\t";
-    cppfile<<"\n";
-    ball_time.open("/home/ubuntu/ball_time.txt");
-    ball_time<<"pengzhang_fushi"<<"\t"<<"initialize"<<"\t"<<"ccl"<<"\t"<<"center single"<<"\t"<<"center"<<"\t"<<"free"<<"\t";
-    ball_time<<"\n";
-    obs_time.open("/home/ubuntu/obs_time.txt");
-    obs_time<<"cudamemset"<<"\t"<<"projct"<<"\t"<<"object_label"<<"\t"<<"Gaussian"<<"\t"<<"ccl"<<"\t"<<"center"<<"\t"<<"free"<<"\t";
-    obs_time<<"\n";
-    time1.open("/home/ubuntu/time.txt");
-    time1<<"driver"<<"\t"<<"registration"<<"\t"<<"cloud copy"<<"\t"<<"obs"<<"\t"<<"ball single"<<"\t"<<"ball all"<<"\t"<<"total"<<"\t";
-    time1<<"\n";
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer11 (new pcl::visualization::PCLVisualizer ("point cloud Viewer"));
+    viewer11->setCameraPosition(0, 0, -4000, 0, 0, 1,0, -1, 0);
 
     while(!protonect_shutdown && (framemax == (size_t)-1 || framecount < framemax))
     {
@@ -370,14 +341,8 @@ void Protonect::cicle()
         {
             cudaStreamDestroy(streams[i]);
         }
-         double tstart=dtime();
-  //       printf("11 driver driver time = %f(ms)\n\n",(tstart-clocktime0)*1000);
-         time1<<(tstart-clocktime0)*1000<<"\t";
         registration_kernel(d_dis_depth, d_raw_rgb, d_map_dist, d_map_x, d_map_yi, d_c, d_cloud, d_table, d_seg_table, h_num_yellow);
         cudaDeviceSynchronize();
-        double tstart1=dtime();
-  //      printf("22 registration time = %f(ms)\n\n",(tstart1-tstart)*1000);
-        time1<<(tstart1-tstart)*1000<<"\t";
         cudaMemcpy(cloud.points.data(), d_cloud, imageSize*8, cudaMemcpyDeviceToHost);
         if (color_calibrating)
         {
@@ -404,18 +369,9 @@ void Protonect::cicle()
             cout << "rgbImage Saved!" << endl;
             color_calibrating=false;
         }
-        double tstart2=dtime();
-  //      printf("33 cloud copy and color calibrating time = %f(ms)\n\n",(tstart2-tstart1)*1000);
-        time1<<(tstart2-tstart1)*1000<<"\t";
         cudaMemset(pj,0,400*240*sizeof(unsigned char));
-        num_obstacle_candidate = project2D(d_cloud, pj, coeffi, obstacle_position,d_table,histo_x,histo_y,histo_z,d_kernel,kernel_size,result_,label,h_label,ttime);
-        //printf("!!!!!!!!!!!!!!number obs %d\n",num_obstacle_candidate);
-        //        obs_time<<ttime[0]<<"\t"<<ttime[1]<<"\t"<<ttime[2]<<"\t"<<ttime[3]<<"\t"<<ttime[4]<<"\t"<<ttime[5]<<"\t"<<ttime[6]<<"\t";
-//        obs_time<<"\n";
+        num_obstacle_candidate = project2D(d_cloud, pj, coeffi, obstacle_position,d_table,histo_x,histo_y,histo_z,d_kernel,kernel_size,result_,label,h_label);
         cudaDeviceSynchronize();
-        double tstart3=dtime();
-  //      printf("44 obstacle detection time = %f(ms)\n\n",(tstart3-tstart2)*1000);
-        time1<<(tstart3-tstart2)*1000<<"\t";
         nubot_common::object_info obstacle_ball_position;
         printf("yellow number %d \n",*h_num_yellow);
         if (num_obstacle_candidate==0)
@@ -426,15 +382,8 @@ void Protonect::cicle()
          }
         else
          {
-            double tstart4=dtime();
-            num_ball_candidate=CCL(d_seg_table,d_label,ball_position,ttime1);
-          //  printf("no num_ball_candidate!%d\n\n",num_ball_candidate);
+            num_ball_candidate=CCL(d_seg_table,d_label,ball_position);
             cudaDeviceSynchronize();
-            double tstart5=dtime();
-            ball_time<<ttime1[0]<<"\t"<<ttime1[1]<<"\t"<<ttime1[2]<<"\t"<<ttime1[3]<<"\t"<<ttime1[4]<<"\t"<<ttime1[5]<<"\t";
-            ball_time<<"\n";
-  //          printf("551 ball ball time = %f(ms)\n\n",(tstart5-tstart4)*1000);
-            time1<<(tstart5-tstart4)*1000<<"\t";
             if (num_ball_candidate==0)
                obstacle_ball_position.ball_know=false;
 
@@ -460,7 +409,6 @@ void Protonect::cicle()
              float zk=ball_point.x*aa[8]+ball_point.y*aa[9]+ball_point.z*aa[10]+aa[11]*1000;
              printf("3D ball position left up foreward %f %f %f\n\n",ball_point.x,ball_point.y,ball_point.z);
              printf("robot 3D ball position  forward left up %f %f %f\n\n",xk,yk,zk);
-  //           if (xk>1300 && zk < 1200 && obstacle_ball_position.ball_know)
 
              if (xk>0)
             {
@@ -476,23 +424,19 @@ void Protonect::cicle()
             }
             }
         }
-        double clocktime1=dtime();
-  //      printf("55 ball detection time = %f(ms)\n\n",(clocktime1-tstart3)*1000);
-        time1<<(clocktime1-tstart3)*1000<<"\t"<<(clocktime1-clocktime0)*1000<<"\t";
-        time1<<"\n";
         if (view_color_seg)
         {
-            unsigned char *hpj=(unsigned char *)malloc(400*240*sizeof(unsigned char));;
-            cudaMemcpy(hpj,pj,400*240*sizeof(unsigned char),cudaMemcpyDeviceToHost);
+//            unsigned char *hpj=(unsigned char *)malloc(400*240*sizeof(unsigned char));;
+//            cudaMemcpy(hpj,pj,400*240*sizeof(unsigned char),cudaMemcpyDeviceToHost);
 
-            unsigned char *h_ppjj=(unsigned char *)malloc(512*424*sizeof(unsigned char));
-            cudaMemcpy(h_ppjj,d_seg_table,512*424*sizeof(unsigned char),cudaMemcpyDeviceToHost);
-            cv::Mat hpj_imgg_(cv::Size(400, 240),CV_8UC1,hpj);
-            cv::namedWindow("ball morphological operation");
-            cv::imshow("obs morphological operation", hpj_imgg_*255);
-            cv::Mat pj_imgg_(cv::Size(512, 424),CV_8UC1,h_ppjj);
-            cv::namedWindow("ball morphological operation");
-            cv::imshow("ball morphological operation", pj_imgg_*255);
+//            unsigned char *h_ppjj=(unsigned char *)malloc(512*424*sizeof(unsigned char));
+//            cudaMemcpy(h_ppjj,d_seg_table,512*424*sizeof(unsigned char),cudaMemcpyDeviceToHost);
+//            cv::Mat hpj_imgg_(cv::Size(400, 240),CV_8UC1,hpj);
+//            cv::namedWindow("ball morphological operation");
+//            cv::imshow("obs morphological operation", hpj_imgg_*255);
+//            cv::Mat pj_imgg_(cv::Size(512, 424),CV_8UC1,h_ppjj);
+//            cv::namedWindow("ball morphological operation");
+//            cv::imshow("ball morphological operation", pj_imgg_*255);
             if (cloud.isOrganized())
             {
                 rgb_image = cv::Mat(cloud.height, cloud.width, CV_8UC3);
@@ -584,7 +528,7 @@ void Protonect::cicle()
               }
 
           }
-/*
+
         if (point_cloud_view && !ball_detection_view && !obstacle_detection_view)
         {//只看点云，不看障碍物
         viewer11->removeAllPointClouds();
@@ -630,7 +574,7 @@ void Protonect::cicle()
            }
          viewer11->spinOnce (10);
         }
-*/
+
         if(!obstacle_detection_view && num_obstacle_candidate)
         {
         for (int i=0;i<num_obstacle_candidate;i++)
@@ -648,9 +592,6 @@ void Protonect::cicle()
         }
        obstacle_ball_position.header.stamp=ros::Time::now();
        obstacle_ball_pub.publish(obstacle_ball_position);
-       printf("publish time %f(ms)\n",(dtime()-tend)*1000);
-       tend=dtime();
-       printf("process time %f(ms)\n",(tend-clocktime0)*1000);
         framecount++;
 
         if (!viewer_enabled)//viewer_enabled=false, 所以一直进入这里continue就不会执行后面的了
@@ -669,10 +610,6 @@ void Protonect::cicle()
 
     }
 
-    cppfile.close();
-    ball_time.close();
-    obs_time.close();
-    time1.close();
     /// [loop end]
     cudaFree(d_cloud);
     cudaFree(d_c);

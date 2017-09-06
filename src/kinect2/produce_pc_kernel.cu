@@ -708,48 +708,24 @@ double gettime()
     tseconds=(double)(mytime.tv_sec+mytime.tv_usec*1.0e-6);
     return tseconds;
 }
-int CCL(unsigned char *d_seg_table, int *d_label, float *ball_position, float *ttime1)
+int CCL(unsigned char *d_seg_table, int *d_label, float *ball_position)
 {
-//        unsigned char *h_ppjj=(unsigned char *)malloc(512*424*sizeof(unsigned char));
-//        cudaMemcpy(h_ppjj,d_seg_table,512*424*sizeof(unsigned char),cudaMemcpyDeviceToHost);
-//        cv::Mat pj_imgg_(cv::Size(512, 424),CV_8UC1,h_ppjj);
-//        cv::namedWindow("color segment");
-//        cv::imshow("color segment", pj_imgg_*255);
-//        cv::waitKey(10);
-//-------------------------开闭运算------------------------------
-//----------------------------------------------------------------
     double ti=gettime();
-    unsigned char *d_seg_table_temp;//=(unsigned char *)malloc(512*424*sizeof(unsigned char));
+    unsigned char *d_seg_table_temp;
     cudaMalloc((void **)&d_seg_table_temp,512*424*sizeof(unsigned char));
 
-    //先进行膨胀腐蚀运算滤波
-
-//    for (int i=0;i<2;i++)
-//    {//膨胀
-//        cudaMemcpy(d_seg_table_temp,d_seg_table,512*424*sizeof(unsigned char),cudaMemcpyDeviceToDevice);
-//        peng_zhang<<< Grid, threadsPerBlock >>>(d_seg_table,d_seg_table_temp,512,424);
-//    }
     for (int j=0;j<3;j++)
-    {//腐蚀
+    {//corrosion
         cudaMemcpy(d_seg_table_temp,d_seg_table,512*424*sizeof(unsigned char),cudaMemcpyDeviceToDevice);
         fu_shi<<< Grid, threadsPerBlock >>>(d_seg_table,d_seg_table_temp,512,424);
     }
     for (int i=0;i<4;i++)
-    {//膨胀
+    {//dilate
         cudaMemcpy(d_seg_table_temp,d_seg_table,512*424*sizeof(unsigned char),cudaMemcpyDeviceToDevice);
         peng_zhang<<< Grid, threadsPerBlock >>>(d_seg_table,d_seg_table_temp,512,424);
     }
-     cudaDeviceSynchronize();
-    double ti1=gettime();
-    ttime1[0]=(ti1-ti)*1000;
-//    printf("551 1 pengzhang fushi time = %f(ms)\n\n",(ti1-ti)*1000);
-//    int *h_label=new int[512*424];
-//    memset(h_label,0,512*424*sizeof(int));
+    cudaDeviceSynchronize();
     label_initialize<<< Grid, threadsPerBlock >>>(d_seg_table,d_label,512,424);//
-//    cudaMemcpy(h_label,d_label,512*424*sizeof(int),cudaMemcpyDeviceToHost);//如果change=0,说明没有任何改变，则退出循环
-    double ti2=gettime();
-    ttime1[1]=(ti2-ti1)*1000;
-//    printf("551 2 initialize time = %f(ms)\n\n",(ti2-ti1)*1000);
     int *array;
     cudaMalloc((void **)&array,6*sizeof(int));
     cudaMemset(array,0,6*sizeof(int));
@@ -761,30 +737,10 @@ int CCL(unsigned char *d_seg_table, int *d_label, float *ball_position, float *t
 
     for (size_t nnn=0;nnn<3;nnn++)
     {
-
-//        cudaMemset(d_flag,0,1*sizeof(int));
         eight_DLS_last<<< Grid, threadsPerBlock >>>(d_seg_table,d_label,array,d_flag,nnn);
-
-//        cudaMemcpy(&h_flag, d_flag, 1*sizeof(int), cudaMemcpyDeviceToHost);
-
-//        eight_DLS_last<<< Grid, threadsPerBlock >>>(d_seg_table,d_label,array,d_flag,nnn);
     }
-     cudaDeviceSynchronize();
-//    cudaMemcpy(h_label,d_label,512*424*sizeof(int),cudaMemcpyDeviceToHost);//如果change=0,说明没有任何改变，则退出循环
-//   vector<int> array_;
-//    for (int h=0;h<512*424;h++)
-//   {
-//       if (h_label[h]>0)
-//       {
-//           array_.push_back(h_label[h]);
-//       }
-//   }
-    double ti3=gettime();
-    ttime1[2]=(ti3-ti2)*1000;
-//    printf("551 3 CCL BALL time = %f(ms)\n\n",(ti3-ti2)*1000);
-//    printf("ball nnnnnn %d\n",nnn);
+    cudaDeviceSynchronize();
     cudaMemcpy(h_array,array,5*sizeof(int),cudaMemcpyDeviceToHost);//如果change=0,说明没有任何改变，则退出循环
-//    cudaDeviceSynchronize();
     int *h_center;
     cudaHostAlloc((void **)&h_center,3*sizeof(int),cudaHostAllocDefault);
     int *center;
@@ -793,18 +749,11 @@ int CCL(unsigned char *d_seg_table, int *d_label, float *ball_position, float *t
 
     for (int h1=0;h1<5;h1++)
     {
-//        printf("array ball %d \n",h_array[h1]);
         if (h_array[h1]>0)
         {
-//            cudaMemset(n,0,1*sizeof(int));
             cudaMemset(center,0,3*sizeof(int));
-            double ti4=gettime();
-            //计算每一个区域的编号对应的像素点个数以及中心，后面进行优化可以考虑替换掉原子操作
             count<<< Grid, threadsPerBlock >>>(d_label,h_array[h1],center,512,424);
             cudaDeviceSynchronize();
-            double ti5=gettime();
-            ttime1[3]=(ti5-ti4)*1000;
-//            printf("551 4 center single time = %f(ms)\n\n",(ti5-ti4)*1000);
             cudaMemcpy(h_center,center,3*sizeof(int),cudaMemcpyDeviceToHost);
             if (h_center[0]<20)//如果像素点很少的话忽略这个区域
             {
@@ -816,25 +765,18 @@ int CCL(unsigned char *d_seg_table, int *d_label, float *ball_position, float *t
                 ball_position[3*nu+0]=h_center[1]/(h_center[0]);
                 ball_position[3*nu+1]=h_center[2]/(h_center[0]);
                 ball_position[3*nu+2]=h_center[0];
-//                printf("center ball position %f %f \n\n",ball_position[3*nu+0],ball_position[3*nu+1]);
                 nu=nu+1;
             }
         }
 
     }
     cudaDeviceSynchronize();
-    double ti6=gettime();
-    ttime1[4]=(ti6-ti3)*1000;
-//    printf("551 5 center ball time = %f(ms)\n\n",(ti6-ti3)*1000);
     cudaFree(d_flag);
     cudaFreeHost(h_array);
     cudaFree(center);
     cudaFreeHost(h_center);
     cudaFree(array);
     cudaFree(d_seg_table_temp);
-    double ti7=gettime();
-    ttime1[5]=(ti7-ti6)*1000;
-//    printf("551 6 free time = %f(ms)\n\n",(ti7-ti6)*1000);
     return (nu);
 }
 
@@ -1127,9 +1069,8 @@ __global__ void computer_center1(int *output,int *index,int *t_index,int *amount
    __syncthreads();
    output[99]=index[399];//index最后一个数放的是最终有数值的块的个数
 }
-int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_position,unsigned char *d_table,int *histo_x,int *histo_y,int *histo_z,double *d_kernel,size_t kernel_size,unsigned char *result_, int *label, int *h_label, float *ttime)
+int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_position,unsigned char *d_table,int *histo_x,int *histo_y,int *histo_z,double *d_kernel,size_t kernel_size,unsigned char *result_, int *label, int *h_label)
 {
-    double ttst=gettime();
     int *d_index,*d_t_index,*d_amount,*dx_amount,*dy_amount,*d_output;
     int *output_amount,*output_x, *output_y;
     cudaMalloc((void **)&d_index,400*sizeof(int));
@@ -1158,58 +1099,25 @@ int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_posi
     cudaMemset(output_amount,0,100*sizeof(int));
     cudaMemset(output_x,0,100*sizeof(int));
     cudaMemset(output_y,0,100*sizeof(int));
-    double tts=gettime();
-    ttime[0]=(tts-ttst)*1000;
-//    printf("441 cudamemset time = %f(ms)\n\n",(tts-ttst)*1000);
+
     projection_kernel<<< Grid, threadsPerBlock >>>(d_cloud,aa,histo_x,histo_y,histo_z,d_table);
     cudaDeviceSynchronize();
-    double tts1=gettime();
-    ttime[1]=(tts1-tts)*1000;
-//    printf("442 projection_kernel time = %f(ms)\n\n",(tts1-tts)*1000);
     object_label<<< Grid_, threadsPerBlock >>>(pj, histo_x, histo_y, histo_z);
     cudaDeviceSynchronize();
-    double tts2=gettime();
-    ttime[2]=(tts2-tts1)*1000;
-//    printf("443 object_label time = %f(ms)\n\n",(tts2-tts1)*1000);
-//         ttime[1]=(tts2-tts1)*1000;
-//         unsigned char *h_ppjj11=(unsigned char *)malloc(400*240*sizeof(unsigned char));
-//          cudaMemcpy(h_ppjj11,pj,400*240*sizeof(unsigned char),cudaMemcpyDeviceToHost);
-//          cv::Mat pj_imgg11_(cv::Size(400, 240),CV_8UC1,h_ppjj11);
-//          cv::namedWindow("object position");
-//          cv::imshow("object position", pj_imgg11_*255);
-//          cv::waitKey(10);
     Gaussian1D_kernel<<< Grid_, threadsPerBlock >>>(pj, d_kernel, kernel_size, result_);
 
     Gaussian1D_kernel_<<< Grid_, threadsPerBlock >>>(result_, d_kernel, kernel_size, pj, label);
-//    cudaDeviceSynchronize();
-    double tts3=gettime();
-    ttime[3]=(tts3-tts2)*1000;
-//    printf("444 Gaussian time = %f(ms)\n\n",(tts3-tts2)*1000);
-//    label_initialize<<< Grid_, threadsPerBlock >>>(pj,label,400,240);
-//     unsigned char *h_ppjj=(unsigned char *)malloc(400*240*sizeof(unsigned char));
-//      cudaMemcpy(h_ppjj,pj,400*240*sizeof(unsigned char),cudaMemcpyDeviceToHost);
-//      cv::Mat pj_imgg_(cv::Size(400, 240),CV_8UC1,h_ppjj);
-//      cv::namedWindow("Gaussian filter");
-//      cv::imshow("Gaussian filter", pj_imgg_*255);
-//      cv::waitKey(10);
-
-//    double ty=gettime();
-
-        for (int nh=0;nh<3;nh++)
-        {
-            eight_DLS_last_obstacle<<< Grid_, threadsPerBlock >>>(pj,label,400,240);
-        }
     cudaDeviceSynchronize();
-        double ty1=gettime();
-//        ttime[4]=(ty1-tts3)*1000;
-//        printf("445 CCL OBSTACLE time = %f(ms)\n\n",(ty1-tts3)*1000);
 
-
-
-        int *output=new int[100];
-        int *amount=new int[100];
-        int *x_amount=new int[100];
-        int *y_amount=new int[100];
+    for (int nh=0;nh<3;nh++)
+    {
+        eight_DLS_last_obstacle<<< Grid_, threadsPerBlock >>>(pj,label,400,240);
+    }
+    cudaDeviceSynchronize();
+    int *output=new int[100];
+    int *amount=new int[100];
+    int *x_amount=new int[100];
+    int *y_amount=new int[100];
 
     computer_center<<< Grid1, threadsPerBlock1 >>>(label,d_index,d_t_index,d_amount,dx_amount,dy_amount);
     cudaDeviceSynchronize();
@@ -1221,7 +1129,6 @@ int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_posi
     cudaMemcpy(amount,output_amount,100*sizeof(int),cudaMemcpyDeviceToHost);
     cudaMemcpy(x_amount,output_x,100*sizeof(int),cudaMemcpyDeviceToHost);
     cudaMemcpy(y_amount,output_y,100*sizeof(int),cudaMemcpyDeviceToHost);
-//    printf("\n\n");
     int nu=0;
     vector<int> center_index, center_amount, center_x, center_y;
     if (output[99]>0)
@@ -1231,11 +1138,9 @@ int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_posi
     center_x.push_back(x_amount[0]);
     center_y.push_back(y_amount[0]);
 
-//    printf("campact-----------------------------------------------------------------------\n");
     for (int g=1;g<output[99];g++)
     {
         int numb=0;
-//        printf(" %d ",output[g]);
         for (int l=0;l<center_index.size();l++)
         {
             if (output[g]==center_index.at(l))
@@ -1258,10 +1163,7 @@ int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_posi
             center_x.push_back(x_amount[g]);
             center_y.push_back(y_amount[g]);
         }
-//        printf(" %d ",output[g]);
     }
-
-//    printf("\n\n");
 
     for (int hq=0;hq<center_index.size();hq++)
     {
@@ -1274,17 +1176,10 @@ int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_posi
         {
            obstacle_position[2*nu+0]=x;
            obstacle_position[2*nu+1]=y;
-//           printf("distance: %f pixels %d %f\n",obstacle_position[2*nu+1], center_amount.at(hq), value);
            nu++;
         }
-//        printf(" %d %d %d %d \n ",center_index.at(hq),center_amount.at(hq),center_x.at(hq),center_y.at(hq));
     }
     }
-
-
-
-    double ty2=gettime();
-    ttime[5]=(ty2-ty1)*1000;
     cudaFree(d_index);
     cudaFree(d_t_index);
     cudaFree(d_amount);
@@ -1299,10 +1194,6 @@ int project2D(float *d_cloud,  unsigned char *pj, float *aa,float *obstacle_posi
     free(amount);
     free(x_amount);
     free(y_amount);
-
-    double tte=gettime();
-    ttime[6]=(tte-ty2)*1000;
-//     printf("449 obs center time = %f(ms)\n\n",(tte-ty3)*1000);
     return (nu);
 
 }

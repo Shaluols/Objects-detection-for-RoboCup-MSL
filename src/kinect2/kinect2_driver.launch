@@ -4,8 +4,8 @@
 <node pkg = "kinect2" type = "kinect2" name = "kinect2_driver" output = "screen">
    <param name="color_calibrating" type="bool" value="false" />
    <param name="cali_tf" type="bool" value="false" />
-   <param name="view_color_seg" type="bool" value="true" />
-   <param name="point_cloud_view" type="bool" value="false" />
+   <param name="view_color_seg" type="bool" value="false" />
+   <param name="point_cloud_view" type="bool" value="true" />
    <param name="ball_detection_view" type="bool" value="false" />
    <param name="obstacle_detection_view" type="bool" value="false" /> 
 </node>
